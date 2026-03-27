@@ -1,0 +1,70 @@
+{
+  "entities": {
+    "PatientRecord": {
+      "title": "Patient Record",
+      "description": "A medical certificate record for a nephrology patient.",
+      "type": "object",
+      "properties": {
+        "patientName": { "type": "string", "description": "The name of the patient." },
+        "age": { "type": "integer", "description": "The age of the patient." },
+        "gender": { "type": "string", "enum": ["Male", "Female", "Other"], "description": "The gender of the patient." },
+        "nagritaNumber": { "type": "string", "description": "The citizenship number of the patient." },
+        "district": { "type": "string", "description": "The district of the patient." },
+        "municipality": { "type": "string", "description": "The municipality of the patient." },
+        "wardNo": { "type": "string", "description": "The ward number of the patient." },
+        "diagnosis": { "type": "string", "description": "The medical diagnosis." },
+        "dialysisStartDateBS": { "type": "string", "description": "The start date of dialysis in BS." },
+        "dialysisStartDateAD": { "type": "string", "description": "The start date of dialysis in AD." },
+        "issueDateBS": { "type": "string", "description": "The date the certificate was issued in BS." },
+        "issueDateAD": { "type": "string", "description": "The date the certificate was issued in AD." },
+        "transplantPlanned": { "type": "boolean", "description": "Whether a transplant is planned." },
+        "doctorId": { "type": "string", "description": "The ID of the doctor who issued the certificate." },
+        "doctorName": { "type": "string", "description": "The name of the doctor." },
+        "doctorNmc": { "type": "string", "description": "The NMC number of the doctor." },
+        "doctorDesignation": { "type": "string", "description": "The designation of the doctor." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "The timestamp when the record was created." },
+        "createdBy": { "type": "string", "description": "The UID of the user who created the record." }
+      },
+      "required": ["patientName", "age", "gender", "district", "municipality", "wardNo", "diagnosis", "issueDateBS", "issueDateAD", "doctorId", "doctorName", "doctorNmc", "doctorDesignation", "createdAt", "createdBy"]
+    },
+    "User": {
+      "title": "User",
+      "description": "A user of the system.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "The unique ID of the user." },
+        "email": { "type": "string", "description": "The email address of the user." },
+        "displayName": { "type": "string", "description": "The display name of the user." },
+        "role": { "type": "string", "enum": ["admin", "staff"], "description": "The role of the user." }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "Doctor": {
+      "title": "Doctor",
+      "description": "A doctor who can sign certificates.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "The name of the doctor." },
+        "designation": { "type": "string", "description": "The designation of the doctor." },
+        "qualifications": { "type": "string", "description": "The qualifications of the doctor." },
+        "nmcNumber": { "type": "string", "description": "The NMC number of the doctor." },
+        "department": { "type": "string", "description": "The department of the doctor." }
+      },
+      "required": ["name", "designation", "nmcNumber"]
+    }
+  },
+  "firestore": {
+    "/records/{recordId}": {
+      "schema": "PatientRecord",
+      "description": "Collection of patient medical certificate records."
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Collection of system users and their roles."
+    },
+    "/doctors/{doctorId}": {
+      "schema": "Doctor",
+      "description": "Collection of doctors who can sign certificates."
+    }
+  }
+}

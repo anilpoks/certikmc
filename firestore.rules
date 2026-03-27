@@ -1,0 +1,111 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: records
+    // Document ID: auto-generated
+    // Fields:
+    //   - patientName: string (required)
+    //   - age: number (required)
+    //   - gender: string (required, Male/Female/Other)
+    //   - nagritaNumber: string (optional)
+    //   - district: string (required)
+    //   - municipality: string (required)
+    //   - wardNo: string (required)
+    //   - diagnosis: string (required)
+    //   - dialysisStartDateBS: string (optional)
+    //   - dialysisStartDateAD: string (optional)
+    //   - issueDateBS: string (required)
+    //   - issueDateAD: string (required)
+    //   - transplantPlanned: bool (optional)
+    //   - doctorId: string (required)
+    //   - doctorName: string (required)
+    //   - doctorNmc: string (required)
+    //   - doctorDesignation: string (required)
+    //   - createdAt: timestamp (required)
+    //   - createdBy: string (required, matches auth.uid)
+    //
+    // Collection: users
+    // Document ID: matches auth.uid
+    // Fields:
+    //   - uid: string (required)
+    //   - email: string (required)
+    //   - displayName: string (optional)
+    //   - role: string (required, admin/staff)
+    //
+    // Collection: doctors
+    // Document ID: auto-generated
+    // Fields:
+    //   - name: string (required)
+    //   - designation: string (required)
+    //   - qualifications: string (optional)
+    //   - nmcNumber: string (required)
+    //   - department: string (optional)
+    //
+    // ===============================================================
+
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "nephrokmc@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isValidRecord(data) {
+      return data.keys().hasAll(['patientName', 'age', 'gender', 'district', 'municipality', 'wardNo', 'diagnosis', 'issueDateBS', 'issueDateAD', 'doctorId', 'doctorName', 'doctorNmc', 'doctorDesignation', 'createdAt', 'createdBy']) &&
+             data.patientName is string && data.patientName.size() > 0 && data.patientName.size() < 100 &&
+             data.age is number && data.age >= 0 && data.age < 150 &&
+             data.gender in ['Male', 'Female', 'Other'] &&
+             data.district is string && data.district.size() > 0 &&
+             data.municipality is string && data.municipality.size() > 0 &&
+             data.wardNo is string && data.wardNo.size() > 0 &&
+             data.diagnosis is string && data.diagnosis.size() > 0 &&
+             data.issueDateBS is string && data.issueDateBS.size() > 0 &&
+             data.issueDateAD is string && data.issueDateAD.size() > 0 &&
+             data.doctorId is string && data.doctorId.size() > 0 &&
+             data.doctorName is string && data.doctorName.size() > 0 &&
+             data.doctorNmc is string && data.doctorNmc.size() > 0 &&
+             data.doctorDesignation is string && data.doctorDesignation.size() > 0 &&
+             data.createdAt is timestamp &&
+             data.createdBy == request.auth.uid;
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'role']) &&
+             data.uid == request.auth.uid &&
+             data.email is string &&
+             data.role in ['admin', 'staff'];
+    }
+
+    // Rules
+    match /records/{recordId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidRecord(request.resource.data);
+      allow update: if isAuthenticated() && isValidRecord(request.resource.data) && (request.resource.data.createdBy == resource.data.createdBy || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data) && request.resource.data.role == 'staff';
+      allow update: if isAuthenticated() && (isOwner(userId) && request.resource.data.role == resource.data.role || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    match /doctors/{doctorId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAdmin();
+    }
+  }
+}
