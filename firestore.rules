@@ -97,13 +97,23 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read: if isAuthenticated();
+      allow read: if isAuthenticated() && (isOwner(userId) || isAdmin());
       allow create: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data) && request.resource.data.role == 'staff';
       allow update: if isAuthenticated() && (isOwner(userId) && request.resource.data.role == resource.data.role || isAdmin());
       allow delete: if isAdmin();
     }
 
     match /doctors/{doctorId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /hospitalSettings/{settingId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /commonDiagnoses/{diagnosisId} {
       allow read: if isAuthenticated();
       allow create, update, delete: if isAdmin();
     }

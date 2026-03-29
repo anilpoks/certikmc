@@ -40,11 +40,7 @@ export default function Login() {
             referrerPolicy="no-referrer"
             onError={(e) => {
               const target = e.target as HTMLImageElement;
-              if (target.src !== "https://upload.wikimedia.org/wikipedia/en/thumb/5/5e/Kathmandu_Medical_College_Logo.png/220px-Kathmandu_Medical_College_Logo.png") {
-                target.src = "https://upload.wikimedia.org/wikipedia/en/thumb/5/5e/Kathmandu_Medical_College_Logo.png/220px-Kathmandu_Medical_College_Logo.png";
-              } else {
-                target.src = "https://picsum.photos/seed/kmc-medical-logo/400/600";
-              }
+              target.src = "https://upload.wikimedia.org/wikipedia/en/thumb/5/5e/Kathmandu_Medical_College_Logo.png/220px-Kathmandu_Medical_College_Logo.png";
             }}
           />
           <h1 className="text-2xl font-black text-neutral-900 uppercase tracking-tight">KMC Nephrology</h1>

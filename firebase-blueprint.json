@@ -51,6 +51,28 @@
         "department": { "type": "string", "description": "The department of the doctor." }
       },
       "required": ["name", "designation", "nmcNumber"]
+    },
+    "HospitalSettings": {
+      "title": "Hospital Settings",
+      "description": "Configuration for the hospital header and logo.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "The name of the hospital." },
+        "department": { "type": "string", "description": "The department name." },
+        "address": { "type": "string", "description": "The hospital address." },
+        "phone": { "type": "string", "description": "The hospital phone number." },
+        "logoUrl": { "type": "string", "description": "The base64 encoded logo or URL." }
+      },
+      "required": ["name", "department", "address", "phone"]
+    },
+    "CommonDiagnosis": {
+      "title": "Common Diagnosis",
+      "description": "A predefined diagnosis for quick selection.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "The diagnosis text." }
+      },
+      "required": ["name"]
     }
   },
   "firestore": {
@@ -65,6 +87,14 @@
     "/doctors/{doctorId}": {
       "schema": "Doctor",
       "description": "Collection of doctors who can sign certificates."
+    },
+    "/hospitalSettings/{settingId}": {
+      "schema": "HospitalSettings",
+      "description": "Collection of hospital configuration settings."
+    },
+    "/commonDiagnoses/{diagnosisId}": {
+      "schema": "CommonDiagnosis",
+      "description": "Collection of common diagnoses for dropdowns."
     }
   }
 }

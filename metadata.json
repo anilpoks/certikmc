@@ -1,5 +1,5 @@
 {
   "name": "KMC Nephrology Certificate Generator",
-  "description": "A specialized tool for Kathmandu Medical College's Department of Nephrology to generate and manage patient medical certificates, featuring Nepali date conversion and administrative mapping.",
+  "description": "A specialized tool for Kathmandu Medical College Public Limited's Department of Nephrology to generate and manage patient medical certificates, featuring Nepali date conversion and administrative mapping.",
   "requestFramePermissions": []
 }

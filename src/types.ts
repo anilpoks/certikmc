@@ -16,6 +16,15 @@ export interface User {
 
 export type CertificateTemplateId = 'standard' | 'modern' | 'classic';
 
+export interface HospitalSettings {
+  id?: string;
+  name: string;
+  department: string;
+  address: string;
+  phone: string;
+  logoUrl?: string;
+}
+
 export interface PatientRecord {
   id?: string;
   templateId?: CertificateTemplateId;
@@ -36,6 +45,7 @@ export interface PatientRecord {
   doctorName: string;
   doctorNmc: string;
   doctorDesignation: string;
+  doctorQualifications: string;
   doctorDepartment: string;
   doctorHospital: string;
   createdAt: any;

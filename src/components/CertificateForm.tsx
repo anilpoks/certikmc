@@ -5,8 +5,9 @@ import React, { useEffect, useState } from 'react';
 import { NepaliDatePicker } from 'nepali-datepicker-reactjs';
 import 'nepali-datepicker-reactjs/dist/index.css';
 import { COMMON_DIAGNOSES, DISTRICTS } from '../data/nepal-data';
-import { auth, db } from '../firebase';
+import { auth, db, handleFirestoreError, OperationType } from '../firebase';
 import { Doctor, PatientRecord } from '../types';
+import SearchableSelect from './SearchableSelect';
 
 interface CertificateFormProps {
   onSuccess: (record: PatientRecord) => void;
@@ -15,6 +16,7 @@ interface CertificateFormProps {
 
 export default function CertificateForm({ onSuccess, onChange }: CertificateFormProps) {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [commonDiagnoses, setCommonDiagnoses] = useState<string[]>(COMMON_DIAGNOSES);
   const [formData, setFormData] = useState<Partial<PatientRecord>>({
     templateId: 'standard',
     patientName: '',
@@ -32,6 +34,7 @@ export default function CertificateForm({ onSuccess, onChange }: CertificateForm
     doctorName: '',
     doctorNmc: '',
     doctorDesignation: '',
+    doctorQualifications: '',
     doctorDepartment: '',
     doctorHospital: 'Kathmandu Medical College Public Limited',
   });
@@ -103,6 +106,22 @@ export default function CertificateForm({ onSuccess, onChange }: CertificateForm
   }, [formData]);
 
   useEffect(() => {
+    const q = query(collection(db, 'commonDiagnoses'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      if (!snapshot.empty) {
+        const diagnosesList = snapshot.docs.map(doc => doc.data().name as string);
+        setCommonDiagnoses(diagnosesList);
+        
+        // If current diagnosis is default and we have custom ones, maybe update it?
+        // Actually, better to just let the user pick.
+      }
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, 'commonDiagnoses');
+    });
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
     const q = query(collection(db, 'doctors'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const doctorsList = snapshot.docs.map(doc => ({
@@ -120,10 +139,24 @@ export default function CertificateForm({ onSuccess, onChange }: CertificateForm
           doctorName: doctor.name,
           doctorNmc: doctor.nmcNumber,
           doctorDesignation: doctor.designation,
+          doctorQualifications: doctor.qualifications,
           doctorDepartment: doctor.department,
           doctorHospital: 'Kathmandu Medical College Public Limited',
         }));
+      } else if (doctorsList.length === 0 && !formData.doctorId) {
+        // Fallback to default doctor if none in database
+        setFormData(prev => ({
+          ...prev,
+          doctorName: 'Asso. Prof. Dr. Anil Pokhrel',
+          doctorDesignation: 'Sr. Consultant Nephrologist',
+          doctorQualifications: 'MBBS, MD, DM (Nephrology)',
+          doctorNmc: '3112',
+          doctorDepartment: 'Department of Nephrology',
+          doctorHospital: 'Kathmandu Medical College Public Limited',
+        }));
       }
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, 'doctors');
     });
     return () => unsubscribe();
   }, []);
@@ -160,6 +193,7 @@ export default function CertificateForm({ onSuccess, onChange }: CertificateForm
         doctorName: doctor.name,
         doctorNmc: doctor.nmcNumber,
         doctorDesignation: doctor.designation,
+        doctorQualifications: doctor.qualifications,
         doctorDepartment: doctor.department,
         doctorHospital: 'Kathmandu Medical College Public Limited',
       }));
@@ -204,6 +238,10 @@ export default function CertificateForm({ onSuccess, onChange }: CertificateForm
       issueDateBS: todayBS,
       issueDateAD: todayAD,
       transplantPlanned: true,
+      doctorName: 'Asso. Prof. Dr. Anil Pokhrel',
+      doctorDesignation: 'Sr. Consultant Nephrologist',
+      doctorQualifications: 'MBBS, MD, DM (Nephrology)',
+      doctorNmc: '3112',
       doctorDepartment: 'Department of Nephrology',
       doctorHospital: 'Kathmandu Medical College Public Limited',
     }));
@@ -282,40 +320,30 @@ export default function CertificateForm({ onSuccess, onChange }: CertificateForm
           </div>
         </div>
 
-        <div className="space-y-1.5">
-          <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider">District</label>
-          <select
-            value={formData.district}
-            onChange={e => {
-              const district = DISTRICTS.find(d => d.name === e.target.value);
-              setFormData(prev => ({
-                ...prev,
-                district: e.target.value,
-                municipality: district?.municipalities[0] || ''
-              }));
-            }}
-            className={`w-full px-3 py-2.5 text-sm rounded-xl border ${errors.district ? 'border-red-500 ring-1 ring-red-500' : 'border-neutral-200'} focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none transition-all`}
-          >
-            {DISTRICTS.map(d => (
-              <option key={d.name} value={d.name}>{d.name}</option>
-            ))}
-          </select>
-          {errors.district && <p className="text-[10px] text-red-500 font-medium">{errors.district}</p>}
-        </div>
+        <SearchableSelect
+          label="District"
+          options={DISTRICTS.map(d => d.name)}
+          value={formData.district || ''}
+          onChange={(value) => {
+            const district = DISTRICTS.find(d => d.name === value);
+            setFormData(prev => ({
+              ...prev,
+              district: value,
+              municipality: district?.municipalities[0] || ''
+            }));
+          }}
+          placeholder="Select District"
+          error={errors.district}
+        />
 
         <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Municipality</label>
-            <select
-              value={formData.municipality}
-              onChange={e => setFormData(prev => ({ ...prev, municipality: e.target.value }))}
-              className="w-full px-3 py-2.5 text-sm rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none transition-all"
-            >
-              {DISTRICTS.find(d => d.name === formData.district)?.municipalities.map(m => (
-                <option key={m} value={m}>{m}</option>
-              ))}
-            </select>
-          </div>
+          <SearchableSelect
+            label="Municipality"
+            options={DISTRICTS.find(d => d.name === formData.district)?.municipalities || []}
+            value={formData.municipality || ''}
+            onChange={(value) => setFormData(prev => ({ ...prev, municipality: value }))}
+            placeholder="Select Municipality"
+          />
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Ward</label>
             <input
@@ -331,20 +359,29 @@ export default function CertificateForm({ onSuccess, onChange }: CertificateForm
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Diagnosis</label>
-          <input
-            type="text"
-            list="diagnosis-options"
+          <div className="flex justify-between items-center">
+            <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Diagnosis</label>
+            <select
+              onChange={e => {
+                if (e.target.value) {
+                  setFormData(prev => ({ ...prev, diagnosis: e.target.value }));
+                }
+              }}
+              className="text-[10px] bg-neutral-100 border-none rounded px-2 py-0.5 font-medium text-neutral-600 outline-none cursor-pointer hover:bg-neutral-200 transition-colors"
+              value=""
+            >
+              <option value="" disabled>Quick Select...</option>
+              {commonDiagnoses.map(d => (
+                <option key={d} value={d}>{d}</option>
+              ))}
+            </select>
+          </div>
+          <textarea
             value={formData.diagnosis}
             onChange={e => setFormData(prev => ({ ...prev, diagnosis: e.target.value }))}
-            className={`w-full px-3 py-2.5 text-sm rounded-xl border ${errors.diagnosis ? 'border-red-500 ring-1 ring-red-500' : 'border-neutral-200'} focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none transition-all`}
-            placeholder="Select or type diagnosis..."
+            className={`w-full px-3 py-2.5 text-sm rounded-xl border ${errors.diagnosis ? 'border-red-500 ring-1 ring-red-500' : 'border-neutral-200'} focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none transition-all min-h-[80px] resize-y`}
+            placeholder="Enter detailed diagnosis..."
           />
-          <datalist id="diagnosis-options">
-            {COMMON_DIAGNOSES.map(d => (
-              <option key={d} value={d} />
-            ))}
-          </datalist>
           {errors.diagnosis && <p className="text-[10px] text-red-500 font-medium">{errors.diagnosis}</p>}
         </div>
 

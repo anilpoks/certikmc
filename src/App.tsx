@@ -20,6 +20,25 @@ export default function App() {
   const [selectedRecord, setSelectedRecord] = useState<Partial<PatientRecord> | null>(null);
   const [liveData, setLiveData] = useState<Partial<PatientRecord>>({});
 
+  const Logo = () => {
+    const [logoSrc, setLogoSrc] = useState("https://kmc.edu.np/wp-content/uploads/2023/06/kmc-logo.png");
+
+    return (
+      <img 
+        src={logoSrc} 
+        alt="KMC Logo" 
+        className="w-10 h-14 object-contain"
+        referrerPolicy="no-referrer"
+        crossOrigin="anonymous"
+        onError={() => {
+          if (logoSrc !== "https://upload.wikimedia.org/wikipedia/en/thumb/5/5e/Kathmandu_Medical_College_Logo.png/220px-Kathmandu_Medical_College_Logo.png") {
+            setLogoSrc("https://upload.wikimedia.org/wikipedia/en/thumb/5/5e/Kathmandu_Medical_College_Logo.png/220px-Kathmandu_Medical_College_Logo.png");
+          }
+        }}
+      />
+    );
+  };
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user);
@@ -59,26 +78,13 @@ export default function App() {
       {/* Navigation */}
       <nav className="bg-white border-b border-neutral-200 sticky top-0 z-50 print:hidden">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <img 
-              src="https://kmc.edu.np/wp-content/uploads/2023/06/kmc-logo.png" 
-              alt="KMC Logo" 
-              className="w-10 h-14 object-contain"
-              referrerPolicy="no-referrer"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                if (target.src !== "https://upload.wikimedia.org/wikipedia/en/thumb/5/5e/Kathmandu_Medical_College_Logo.png/220px-Kathmandu_Medical_College_Logo.png") {
-                  target.src = "https://upload.wikimedia.org/wikipedia/en/thumb/5/5e/Kathmandu_Medical_College_Logo.png/220px-Kathmandu_Medical_College_Logo.png";
-                } else {
-                  target.src = "https://picsum.photos/seed/kmc-medical-logo/400/600";
-                }
-              }}
-            />
-            <div>
-              <h1 className="text-lg font-bold tracking-tight text-neutral-900">KMC Nephrology</h1>
-              <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-[0.2em]">Certificate System</p>
+            <div className="flex items-center gap-4">
+              <Logo />
+              <div>
+                <h1 className="text-lg font-bold tracking-tight text-neutral-900">KMC Nephrology</h1>
+                <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-[0.2em]">Certificate System</p>
+              </div>
             </div>
-          </div>
 
           <div className="flex items-center gap-2 bg-neutral-100 p-1 rounded-2xl">
             <button

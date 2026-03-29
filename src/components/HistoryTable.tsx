@@ -1,7 +1,7 @@
 import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { Eye, FileText, Search } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { db } from '../firebase';
+import { db, handleFirestoreError, OperationType } from '../firebase';
 import { PatientRecord } from '../types';
 
 interface HistoryTableProps {
@@ -21,6 +21,7 @@ export default function HistoryTable({ onView }: HistoryTableProps) {
       setIsLoading(false);
     }, (error) => {
       console.error('Error fetching records:', error);
+      handleFirestoreError(error, OperationType.GET, 'records');
       setIsLoading(false);
     });
 
