@@ -3,8 +3,10 @@ import { Building2, Edit2, Image as ImageIcon, Plus, Stethoscope, Trash2, UserPl
 import React, { useEffect, useState } from 'react';
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { Doctor, HospitalSettings } from '../types';
+import { useLanguage } from '../contexts/LanguageContext';
 
 export default function Settings() {
+  const { t } = useLanguage();
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [diagnoses, setDiagnoses] = useState<string[]>([]);
   const [newDiagnosis, setNewDiagnosis] = useState('');
@@ -20,6 +22,7 @@ export default function Settings() {
 
   const [hospitalSettings, setHospitalSettings] = useState<HospitalSettings>({
     name: 'Kathmandu Medical College Public Limited',
+    nameNe: 'काठमाडौं मेडिकल कलेज पब्लिक लिमिटेड',
     department: 'Department of Nephrology',
     address: 'Sinamangal, Kathmandu, Nepal',
     phone: '+977-1-4476152, 4469064',
@@ -46,7 +49,7 @@ export default function Settings() {
       if (!snapshot.empty) {
         const settings = snapshot.docs[0].data() as HospitalSettings;
         settings.id = snapshot.docs[0].id;
-        setHospitalSettings(settings);
+        setHospitalSettings(prev => ({ ...prev, ...settings }));
       }
     }, (error) => {
       handleFirestoreError(error, OperationType.GET, 'hospitalSettings');
@@ -77,7 +80,7 @@ export default function Settings() {
       } else {
         await addDoc(collection(db, 'hospitalSettings'), settingsData);
       }
-      alert('Hospital settings saved successfully!');
+      alert(t('hospitalSettingsSaved'));
     } catch (error) {
       console.error('Error saving hospital settings:', error);
     }
@@ -106,7 +109,7 @@ export default function Settings() {
   };
 
   const handleDeleteDiagnosis = async (name: string) => {
-    if (window.confirm('Are you sure you want to delete this diagnosis?')) {
+    if (window.confirm(t('confirmDeleteDiagnosis'))) {
       try {
         const q = query(collection(db, 'commonDiagnoses'));
         const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -128,7 +131,7 @@ export default function Settings() {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 500000) { // 500KB limit for base64 in Firestore
-        alert('Image size too large. Please use a smaller image (under 500KB).');
+        alert(t('imageSizeTooLarge'));
         return;
       }
       const reader = new FileReader();
@@ -165,7 +168,7 @@ export default function Settings() {
   };
 
   const handleDeleteDoctor = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this doctor?')) {
+    if (window.confirm(t('confirmDeleteDoctor'))) {
       try {
         await deleteDoc(doc(db, 'doctors', id));
       } catch (error) {
@@ -183,61 +186,76 @@ export default function Settings() {
             <Building2 className="w-6 h-6 text-neutral-600" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-neutral-900">Hospital Settings</h2>
-            <p className="text-neutral-500 text-sm">Update hospital name, logo, and contact details</p>
+            <h2 className="text-xl font-bold text-neutral-900">{t('hospitalSettings')}</h2>
+            <p className="text-neutral-500 text-sm">{t('hospitalSettingsDesc')}</p>
           </div>
         </div>
 
         <form onSubmit={handleSaveHospitalSettings} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <label className="text-sm font-bold text-neutral-700 uppercase tracking-wider">Hospital Name</label>
+              <label className="text-sm font-bold text-neutral-700 uppercase tracking-wider">{t('hospitalName')}</label>
               <input
                 type="text"
                 value={hospitalSettings.name}
                 onChange={e => setHospitalSettings(prev => ({ ...prev, name: e.target.value }))}
                 className="w-full px-4 py-3 rounded-2xl border border-neutral-200 focus:ring-2 focus:ring-neutral-900 outline-none transition-all"
-                placeholder="Hospital Name"
+                placeholder={t('hospitalName')}
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-bold text-neutral-700 uppercase tracking-wider">Department</label>
+              <label className="text-sm font-bold text-neutral-700 uppercase tracking-wider">{t('hospitalNameNe')}</label>
+              <input
+                type="text"
+                value={hospitalSettings.nameNe || ''}
+                onChange={e => setHospitalSettings(prev => ({ ...prev, nameNe: e.target.value }))}
+                className="w-full px-4 py-3 rounded-2xl border border-neutral-200 focus:ring-2 focus:ring-neutral-900 outline-none transition-all"
+                placeholder={t('hospitalNameNe')}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-neutral-700 uppercase tracking-wider">{t('department')}</label>
               <input
                 type="text"
                 value={hospitalSettings.department}
                 onChange={e => setHospitalSettings(prev => ({ ...prev, department: e.target.value }))}
                 className="w-full px-4 py-3 rounded-2xl border border-neutral-200 focus:ring-2 focus:ring-neutral-900 outline-none transition-all"
-                placeholder="Department"
+                placeholder={t('department')}
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-bold text-neutral-700 uppercase tracking-wider">Address</label>
+              <label className="text-sm font-bold text-neutral-700 uppercase tracking-wider">{t('address')}</label>
               <input
                 type="text"
                 value={hospitalSettings.address}
                 onChange={e => setHospitalSettings(prev => ({ ...prev, address: e.target.value }))}
                 className="w-full px-4 py-3 rounded-2xl border border-neutral-200 focus:ring-2 focus:ring-neutral-900 outline-none transition-all"
-                placeholder="Address"
+                placeholder={t('address')}
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-bold text-neutral-700 uppercase tracking-wider">Phone Number</label>
+              <label className="text-sm font-bold text-neutral-700 uppercase tracking-wider">{t('hospitalPhone')}</label>
               <input
                 type="text"
                 value={hospitalSettings.phone}
                 onChange={e => setHospitalSettings(prev => ({ ...prev, phone: e.target.value }))}
                 className="w-full px-4 py-3 rounded-2xl border border-neutral-200 focus:ring-2 focus:ring-neutral-900 outline-none transition-all"
-                placeholder="Phone Number"
+                placeholder={t('hospitalPhone')}
               />
             </div>
           </div>
 
           <div className="space-y-4">
-            <label className="text-sm font-bold text-neutral-700 uppercase tracking-wider block">Hospital Logo</label>
+            <label className="text-sm font-bold text-neutral-700 uppercase tracking-wider block">{t('hospitalLogo')}</label>
             <div className="flex items-center gap-6">
               <div className="h-32 w-32 rounded-2xl border-2 border-dashed border-neutral-200 flex items-center justify-center overflow-hidden bg-neutral-50">
                 {hospitalSettings.logoUrl ? (
-                  <img src={hospitalSettings.logoUrl} alt="Hospital Logo" className="h-full w-full object-contain" />
+                  <img 
+                    src={hospitalSettings.logoUrl} 
+                    alt="Hospital Logo" 
+                    className="h-full w-full object-contain" 
+                    crossOrigin="anonymous"
+                  />
                 ) : (
                   <ImageIcon className="w-8 h-8 text-neutral-300" />
                 )}
@@ -255,7 +273,7 @@ export default function Settings() {
                   className="inline-flex items-center gap-2 bg-white border border-neutral-200 px-6 py-3 rounded-2xl font-semibold hover:bg-neutral-50 transition-all cursor-pointer"
                 >
                   <ImageIcon className="w-5 h-5" />
-                  Upload New Logo
+                  {t('uploadNewLogo')}
                 </label>
                 <p className="text-xs text-neutral-500">Recommended: Square image, under 500KB. This logo will appear on all certificates.</p>
               </div>
@@ -267,7 +285,7 @@ export default function Settings() {
               type="submit"
               className="w-full md:w-auto bg-neutral-900 text-white px-10 py-4 rounded-2xl font-bold hover:bg-neutral-800 transition-all shadow-lg shadow-neutral-200"
             >
-              Save Hospital Settings
+              {t('saveHospitalSettings')}
             </button>
           </div>
         </form>
@@ -280,8 +298,8 @@ export default function Settings() {
             <Stethoscope className="w-6 h-6 text-neutral-600" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-neutral-900">Diagnosis Management</h2>
-            <p className="text-neutral-500 text-sm">Manage common diagnoses for quick selection</p>
+            <h2 className="text-xl font-bold text-neutral-900">{t('diagnosisManagement')}</h2>
+            <p className="text-neutral-500 text-sm">{t('diagnosisManagementDesc')}</p>
           </div>
         </div>
 
@@ -291,13 +309,13 @@ export default function Settings() {
             value={newDiagnosis}
             onChange={e => setNewDiagnosis(e.target.value)}
             className="flex-1 px-4 py-3 rounded-2xl border border-neutral-200 focus:ring-2 focus:ring-neutral-900 outline-none transition-all"
-            placeholder="Enter a new common diagnosis..."
+            placeholder={t('enterNewDiagnosis')}
           />
           <button
             type="submit"
             className="bg-neutral-900 text-white px-8 py-3 rounded-2xl font-bold hover:bg-neutral-800 transition-all shadow-lg shadow-neutral-200"
           >
-            Add
+            {t('add')}
           </button>
         </form>
 
@@ -314,7 +332,7 @@ export default function Settings() {
             </div>
           ))}
           {diagnoses.length === 0 && (
-            <p className="text-neutral-400 text-sm italic col-span-2 text-center py-4">No common diagnoses added yet.</p>
+            <p className="text-neutral-400 text-sm italic col-span-2 text-center py-4">{t('noDiagnoses')}</p>
           )}
         </div>
       </div>
@@ -325,8 +343,8 @@ export default function Settings() {
             <Users className="w-6 h-6 text-neutral-600" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-neutral-900">Doctor Management</h2>
-            <p className="text-neutral-500 text-sm">Manage doctors who can sign certificates</p>
+            <h2 className="text-xl font-bold text-neutral-900">{t('doctorManagement')}</h2>
+            <p className="text-neutral-500 text-sm">{t('doctorManagementDesc')}</p>
           </div>
         </div>
         <button
@@ -334,7 +352,7 @@ export default function Settings() {
           className="flex items-center gap-2 bg-neutral-900 text-white px-6 py-3 rounded-2xl font-semibold hover:bg-neutral-800 transition-all"
         >
           <Plus className="w-5 h-5" />
-          Add Doctor
+          {t('add')} {t('doctor')}
         </button>
       </div>
 
@@ -342,12 +360,12 @@ export default function Settings() {
         <form onSubmit={handleAddDoctor} className="bg-white p-8 rounded-3xl shadow-xl border border-neutral-100 space-y-6 animate-in fade-in slide-in-from-top-4">
           <div className="flex items-center gap-3 mb-2">
             <UserPlus className="w-5 h-5 text-neutral-900" />
-            <h3 className="text-lg font-bold">{editingDoctorId ? 'Edit Doctor Details' : 'New Doctor Details'}</h3>
+            <h3 className="text-lg font-bold">{editingDoctorId ? t('editDoctorDetails') : t('newDoctorDetails')}</h3>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <label className="text-sm font-semibold text-neutral-700">Full Name</label>
+              <label className="text-sm font-semibold text-neutral-700">{t('fullName')}</label>
               <input
                 required
                 type="text"
@@ -358,7 +376,7 @@ export default function Settings() {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-semibold text-neutral-700">NMC Number</label>
+              <label className="text-sm font-semibold text-neutral-700">{t('nmcNumber')}</label>
               <input
                 required
                 type="text"
@@ -369,7 +387,7 @@ export default function Settings() {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-semibold text-neutral-700">Designation</label>
+              <label className="text-sm font-semibold text-neutral-700">{t('designation')}</label>
               <input
                 required
                 type="text"
@@ -380,7 +398,7 @@ export default function Settings() {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-semibold text-neutral-700">Qualifications</label>
+              <label className="text-sm font-semibold text-neutral-700">{t('qualifications')}</label>
               <input
                 type="text"
                 value={newDoctor.qualifications}
@@ -390,7 +408,7 @@ export default function Settings() {
               />
             </div>
             <div className="space-y-2 md:col-span-2">
-              <label className="text-sm font-semibold text-neutral-700">Department</label>
+              <label className="text-sm font-semibold text-neutral-700">{t('department')}</label>
               <input
                 type="text"
                 value={newDoctor.department}
@@ -406,13 +424,13 @@ export default function Settings() {
               onClick={resetForm}
               className="px-6 py-3 rounded-2xl font-semibold text-neutral-600 hover:bg-neutral-100 transition-all"
             >
-              Cancel
+              {t('cancel')}
             </button>
             <button
               type="submit"
               className="bg-neutral-900 text-white px-8 py-3 rounded-2xl font-bold hover:bg-neutral-800 transition-all"
             >
-              {editingDoctorId ? 'Update Doctor' : 'Save Doctor'}
+              {editingDoctorId ? t('updateDoctor') : t('saveDoctor')}
             </button>
           </div>
         </form>
@@ -452,12 +470,12 @@ export default function Settings() {
       {doctors.length === 0 && !isAdding && (
         <div className="text-center py-12 bg-neutral-50 rounded-3xl border-2 border-dashed border-neutral-200">
           <Users className="w-12 h-12 text-neutral-300 mx-auto mb-4" />
-          <p className="text-neutral-500 font-medium">No doctors added yet.</p>
+          <p className="text-neutral-500 font-medium">{t('noDoctors')}</p>
           <button
             onClick={() => setIsAdding(true)}
             className="mt-4 text-neutral-900 font-bold hover:underline"
           >
-            Add your first doctor
+            {t('addFirstDoctor')}
           </button>
         </div>
       )}

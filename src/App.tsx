@@ -1,6 +1,6 @@
 import { onAuthStateChanged, signOut, User as FirebaseUser } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
-import { FilePlus, History, LogOut, Settings as SettingsIcon, User as UserIcon } from 'lucide-react';
+import { collection, doc, getDoc, onSnapshot, query } from 'firebase/firestore';
+import { FilePlus, History, LogOut, Settings as SettingsIcon, User as UserIcon, Globe } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import CertificateForm from './components/CertificateForm';
 import CertificatePreview from './components/CertificatePreview';
@@ -8,20 +8,35 @@ import HistoryTable from './components/HistoryTable';
 import Login from './components/Login';
 import Settings from './components/Settings';
 import { auth, db } from './firebase';
-import { PatientRecord, User } from './types';
+import { HospitalSettings, PatientRecord, User } from './types';
+import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
 
 type View = 'form' | 'history' | 'preview' | 'settings';
 
-export default function App() {
+function AppContent() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [userRole, setUserRole] = useState<'admin' | 'staff' | null>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [currentView, setCurrentView] = useState<View>('form');
   const [selectedRecord, setSelectedRecord] = useState<Partial<PatientRecord> | null>(null);
   const [liveData, setLiveData] = useState<Partial<PatientRecord>>({});
+  const { language, setLanguage, t } = useLanguage();
 
   const Logo = () => {
     const [logoSrc, setLogoSrc] = useState("https://kmc.edu.np/wp-content/uploads/2023/06/kmc-logo.png");
+
+    useEffect(() => {
+      const q = query(collection(db, 'hospitalSettings'));
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        if (!snapshot.empty) {
+          const settings = snapshot.docs[0].data() as HospitalSettings;
+          if (settings.logoUrl) {
+            setLogoSrc(settings.logoUrl);
+          }
+        }
+      });
+      return () => unsubscribe();
+    }, []);
 
     return (
       <img 
@@ -30,11 +45,6 @@ export default function App() {
         className="w-10 h-14 object-contain"
         referrerPolicy="no-referrer"
         crossOrigin="anonymous"
-        onError={() => {
-          if (logoSrc !== "https://upload.wikimedia.org/wikipedia/en/thumb/5/5e/Kathmandu_Medical_College_Logo.png/220px-Kathmandu_Medical_College_Logo.png") {
-            setLogoSrc("https://upload.wikimedia.org/wikipedia/en/thumb/5/5e/Kathmandu_Medical_College_Logo.png/220px-Kathmandu_Medical_College_Logo.png");
-          }
-        }}
       />
     );
   };
@@ -81,8 +91,8 @@ export default function App() {
             <div className="flex items-center gap-4">
               <Logo />
               <div>
-                <h1 className="text-lg font-bold tracking-tight text-neutral-900">KMC Nephrology</h1>
-                <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-[0.2em]">Certificate System</p>
+                <h1 className="text-lg font-bold tracking-tight text-neutral-900">{t('systemTitle')}</h1>
+                <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-[0.2em]">{t('systemSubtitle')}</p>
               </div>
             </div>
 
@@ -94,7 +104,7 @@ export default function App() {
               }`}
             >
               <FilePlus className="w-4 h-4" />
-              Live Editor
+              {t('liveEditor')}
             </button>
             <button
               onClick={() => setCurrentView('history')}
@@ -103,7 +113,7 @@ export default function App() {
               }`}
             >
               <History className="w-4 h-4" />
-              History
+              {t('history')}
             </button>
             {userRole === 'admin' && (
               <button
@@ -113,12 +123,32 @@ export default function App() {
                 }`}
               >
                 <SettingsIcon className="w-4 h-4" />
-                Settings
+                {t('settings')}
               </button>
             )}
           </div>
 
           <div className="flex items-center gap-4">
+            {/* Language Toggle */}
+            <div className="flex items-center bg-neutral-100 p-1 rounded-xl">
+              <button
+                onClick={() => setLanguage('en')}
+                className={`px-3 py-1 text-[10px] font-bold rounded-lg transition-all ${
+                  language === 'en' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-400'
+                }`}
+              >
+                EN
+              </button>
+              <button
+                onClick={() => setLanguage('ne')}
+                className={`px-3 py-1 text-[10px] font-bold rounded-lg transition-all ${
+                  language === 'ne' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-400'
+                }`}
+              >
+                ने
+              </button>
+            </div>
+
             <div className="flex items-center gap-3 pr-4 border-r border-neutral-200">
               <div className="text-right hidden sm:block">
                 <p className="text-sm font-bold">{user.displayName}</p>
@@ -131,7 +161,7 @@ export default function App() {
             <button
               onClick={handleLogout}
               className="p-2 text-neutral-400 hover:text-neutral-900 transition-colors"
-              title="Logout"
+              title={t('logout')}
             >
               <LogOut className="w-5 h-5" />
             </button>
@@ -176,7 +206,7 @@ export default function App() {
         {currentView === 'history' && (
           <div className="space-y-12 print:hidden">
             <div className="text-center max-w-2xl mx-auto">
-              <h2 className="text-4xl font-bold tracking-tight text-neutral-900 mb-4">Patient Records</h2>
+              <h2 className="text-4xl font-bold tracking-tight text-neutral-900 mb-4">{t('history')}</h2>
               <p className="text-neutral-500 text-lg">
                 Access and manage all previously generated medical certificates.
               </p>
@@ -197,7 +227,7 @@ export default function App() {
                 onClick={() => setCurrentView(selectedRecord.id ? 'history' : 'form')}
                 className="text-neutral-500 font-semibold hover:text-neutral-900 transition-colors flex items-center gap-2"
               >
-                ← Back to {selectedRecord.id ? 'History' : 'Form'}
+                ← {selectedRecord.id ? t('backToHistory') : t('backToForm')}
               </button>
               <h2 className="text-2xl font-bold text-neutral-900">Certificate Preview</h2>
               <div className="w-24" /> {/* Spacer */}
@@ -209,7 +239,7 @@ export default function App() {
         {currentView === 'settings' && userRole === 'admin' && (
           <div className="space-y-12 print:hidden">
             <div className="text-center max-w-2xl mx-auto">
-              <h2 className="text-4xl font-bold tracking-tight text-neutral-900 mb-4">System Settings</h2>
+              <h2 className="text-4xl font-bold tracking-tight text-neutral-900 mb-4">{t('settings')}</h2>
               <p className="text-neutral-500 text-lg">
                 Manage doctors and system configurations.
               </p>
@@ -222,9 +252,17 @@ export default function App() {
       {/* Footer */}
       <footer className="max-w-7xl mx-auto px-6 py-12 border-t border-neutral-200 text-center print:hidden">
         <p className="text-neutral-400 text-sm font-medium uppercase tracking-widest">
-          Kathmandu Medical College Public Limited • Department of Nephrology
+          {language === 'ne' ? 'काठमाडौं मेडिकल कलेज पब्लिक लिमिटेड' : 'Kathmandu Medical College Public Limited'} • {t('departmentOfNephrology')}
         </p>
       </footer>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <LanguageProvider>
+      <AppContent />
+    </LanguageProvider>
   );
 }

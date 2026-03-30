@@ -9,6 +9,7 @@
         "age": { "type": "integer", "description": "The age of the patient." },
         "gender": { "type": "string", "enum": ["Male", "Female", "Other"], "description": "The gender of the patient." },
         "nagritaNumber": { "type": "string", "description": "The citizenship number of the patient." },
+        "patientPhone": { "type": "string", "description": "The phone number of the patient." },
         "district": { "type": "string", "description": "The district of the patient." },
         "municipality": { "type": "string", "description": "The municipality of the patient." },
         "wardNo": { "type": "string", "description": "The ward number of the patient." },

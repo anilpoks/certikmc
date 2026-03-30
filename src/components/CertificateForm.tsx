@@ -8,6 +8,7 @@ import { COMMON_DIAGNOSES, DISTRICTS } from '../data/nepal-data';
 import { auth, db, handleFirestoreError, OperationType } from '../firebase';
 import { Doctor, PatientRecord } from '../types';
 import SearchableSelect from './SearchableSelect';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface CertificateFormProps {
   onSuccess: (record: PatientRecord) => void;
@@ -15,6 +16,7 @@ interface CertificateFormProps {
 }
 
 export default function CertificateForm({ onSuccess, onChange }: CertificateFormProps) {
+  const { t, language } = useLanguage();
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [commonDiagnoses, setCommonDiagnoses] = useState<string[]>(COMMON_DIAGNOSES);
   const [formData, setFormData] = useState<Partial<PatientRecord>>({
@@ -23,9 +25,12 @@ export default function CertificateForm({ onSuccess, onChange }: CertificateForm
     age: 0,
     gender: 'Male',
     nagritaNumber: '',
+    patientPhone: '',
     district: DISTRICTS[0].name,
-    municipality: DISTRICTS[0].municipalities[0],
+    municipality: DISTRICTS[0].municipalities[0].name,
     wardNo: '',
+    tole: '',
+    dialysisType: 'Hemodialysis',
     diagnosis: COMMON_DIAGNOSES[0],
     issueDateBS: new NepaliDate().format('YYYY/MM/DD'),
     issueDateAD: new NepaliDate().toJsDate().toISOString().split('T')[0],
@@ -46,50 +51,59 @@ export default function CertificateForm({ onSuccess, onChange }: CertificateForm
     const newErrors: Record<string, string> = {};
     
     if (!formData.patientName || formData.patientName.trim().length < 3) {
-      newErrors.patientName = 'Patient name must be at least 3 characters';
+      newErrors.patientName = language === 'en' ? 'Patient name must be at least 3 characters' : 'बिरामीको नाम कम्तिमा ३ अक्षरको हुनुपर्छ';
     }
     
     if (!formData.district) {
-      newErrors.district = 'District is required';
+      newErrors.district = language === 'en' ? 'District is required' : 'जिल्ला आवश्यक छ';
     }
 
     if (!formData.age || formData.age <= 0) {
-      newErrors.age = 'Valid age is required';
+      newErrors.age = language === 'en' ? 'Valid age is required' : 'सही उमेर आवश्यक छ';
     }
 
     if (!formData.wardNo) {
-      newErrors.wardNo = 'Ward number is required';
+      newErrors.wardNo = language === 'en' ? 'Ward number is required' : 'वडा नम्बर आवश्यक छ';
     }
 
     if (!formData.diagnosis || formData.diagnosis.trim().length === 0) {
-      newErrors.diagnosis = 'Diagnosis is required';
+      newErrors.diagnosis = language === 'en' ? 'Diagnosis is required' : 'निदान आवश्यक छ';
     }
 
     if (!formData.doctorId) {
-      newErrors.doctorId = 'Please select a doctor';
+      newErrors.doctorId = language === 'en' ? 'Please select a doctor' : 'कृपया डाक्टर छान्नुहोस्';
     }
 
     // Date validation
     const dateRegex = /^\d{4}[\/\-]\d{2}[\/\-]\d{2}$/;
+    const today = new NepaliDate();
     
     if (!formData.issueDateBS || !dateRegex.test(formData.issueDateBS)) {
-      newErrors.issueDateBS = 'Invalid Nepali date format (YYYY/MM/DD)';
+      newErrors.issueDateBS = t('invalidDateFormat');
     } else {
       try {
-        new NepaliDate(formData.issueDateBS);
+        const date = new NepaliDate(formData.issueDateBS);
+        if (date.getYear() < 2000 || date.getYear() > 2100) {
+          newErrors.issueDateBS = t('invalidNepaliDate');
+        }
       } catch (e) {
-        newErrors.issueDateBS = 'Invalid Nepali date';
+        newErrors.issueDateBS = t('invalidNepaliDate');
       }
     }
 
     if (formData.dialysisStartDateBS) {
       if (!dateRegex.test(formData.dialysisStartDateBS)) {
-        newErrors.dialysisStartDateBS = 'Invalid Nepali date format (YYYY/MM/DD)';
+        newErrors.dialysisStartDateBS = t('invalidDateFormat');
       } else {
         try {
-          new NepaliDate(formData.dialysisStartDateBS);
+          const date = new NepaliDate(formData.dialysisStartDateBS);
+          if (date.getYear() < 2000 || date.getYear() > 2100) {
+            newErrors.dialysisStartDateBS = t('invalidNepaliDate');
+          } else if (date.toJsDate() > today.toJsDate()) {
+            newErrors.dialysisStartDateBS = t('dateInFuture');
+          }
         } catch (e) {
-          newErrors.dialysisStartDateBS = 'Invalid Nepali date';
+          newErrors.dialysisStartDateBS = t('invalidNepaliDate');
         }
       }
     }
@@ -162,6 +176,11 @@ export default function CertificateForm({ onSuccess, onChange }: CertificateForm
   }, []);
 
   const handleBSDateChange = (field: 'issueDateBS' | 'dialysisStartDateBS', value: string) => {
+    if (!value) {
+      const adField = field === 'issueDateBS' ? 'issueDateAD' : 'dialysisStartDateAD';
+      setFormData(prev => ({ ...prev, [field]: '', [adField]: '' }));
+      return;
+    }
     try {
       const nepaliDate = new NepaliDate(value);
       const adDate = nepaliDate.toJsDate().toISOString().split('T')[0];
@@ -173,8 +192,17 @@ export default function CertificateForm({ onSuccess, onChange }: CertificateForm
   };
 
   const handleADDateChange = (field: 'issueDateAD' | 'dialysisStartDateAD', value: string) => {
+    if (!value) {
+      const bsField = field === 'issueDateAD' ? 'issueDateBS' : 'dialysisStartDateBS';
+      setFormData(prev => ({ ...prev, [field]: '', [bsField]: '' }));
+      return;
+    }
     try {
       const adDate = new Date(value);
+      if (isNaN(adDate.getTime())) {
+        setFormData(prev => ({ ...prev, [field]: value }));
+        return;
+      }
       const nepaliDate = new NepaliDate(adDate);
       const bsDate = nepaliDate.format('YYYY/MM/DD');
       const bsField = field === 'issueDateAD' ? 'issueDateBS' : 'dialysisStartDateBS';
@@ -229,9 +257,13 @@ export default function CertificateForm({ onSuccess, onChange }: CertificateForm
       patientName: 'Rishikesh Prasad Regmi',
       age: 58,
       gender: 'Male',
+      nagritaNumber: '12-34-56-78901',
+      patientPhone: '+977-9841234567',
       district: 'Kathmandu',
       municipality: 'Kathmandu Metropolitan City',
       wardNo: '16',
+      tole: 'Shantinagar',
+      dialysisType: 'Hemodialysis',
       diagnosis: 'Chronic Kidney Disease (CKD) Stage V, Hypertension (HTN), Diabetes Mellitus Type II (DM-II)',
       dialysisStartDateBS: '2080/04/15',
       dialysisStartDateAD: '2023/07/31',
@@ -255,7 +287,7 @@ export default function CertificateForm({ onSuccess, onChange }: CertificateForm
             <User className="w-5 h-5 text-neutral-600" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-neutral-900">Patient Details</h2>
+            <h2 className="text-lg font-bold text-neutral-900">{t('patientDetails')}</h2>
           </div>
         </div>
         <button
@@ -263,13 +295,13 @@ export default function CertificateForm({ onSuccess, onChange }: CertificateForm
           onClick={fillSampleData}
           className="text-[10px] font-bold text-neutral-500 hover:text-neutral-900 transition-colors bg-neutral-50 px-3 py-1.5 rounded-lg border border-neutral-100 uppercase tracking-wider"
         >
-          Fill Sample
+          {t('fillSample')}
         </button>
       </div>
 
       <div className="grid grid-cols-1 gap-4">
         <div className="space-y-1.5">
-          <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Template</label>
+          <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider">{t('template')}</label>
           <select
             value={formData.templateId}
             onChange={e => setFormData(prev => ({ ...prev, templateId: e.target.value as any }))}
@@ -282,7 +314,7 @@ export default function CertificateForm({ onSuccess, onChange }: CertificateForm
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Patient Name</label>
+          <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider">{t('patientName')}</label>
           <input
             required
             type="text"
@@ -294,9 +326,31 @@ export default function CertificateForm({ onSuccess, onChange }: CertificateForm
           {errors.patientName && <p className="text-[10px] text-red-500 font-medium">{errors.patientName}</p>}
         </div>
 
+        <div className="space-y-1.5">
+          <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider">{t('nagritaNumber')} ({t('optional')})</label>
+          <input
+            type="text"
+            value={formData.nagritaNumber}
+            onChange={e => setFormData(prev => ({ ...prev, nagritaNumber: e.target.value }))}
+            className="w-full px-3 py-2.5 text-sm rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none transition-all"
+            placeholder="e.g. 12-34-56-78901"
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider">{t('phoneNumber')} ({t('optional')})</label>
+          <input
+            type="text"
+            value={formData.patientPhone}
+            onChange={e => setFormData(prev => ({ ...prev, patientPhone: e.target.value }))}
+            className="w-full px-3 py-2.5 text-sm rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none transition-all"
+            placeholder="e.g. +977-98XXXXXXXX"
+          />
+        </div>
+
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Age</label>
+            <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider">{t('age')}</label>
             <input
               required
               type="number"
@@ -307,45 +361,45 @@ export default function CertificateForm({ onSuccess, onChange }: CertificateForm
             {errors.age && <p className="text-[10px] text-red-500 font-medium">{errors.age}</p>}
           </div>
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Gender</label>
+            <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider">{t('gender')}</label>
             <select
               value={formData.gender}
               onChange={e => setFormData(prev => ({ ...prev, gender: e.target.value as any }))}
               className="w-full px-3 py-2.5 text-sm rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none transition-all"
             >
-              <option value="Male">Male</option>
-              <option value="Female">Female</option>
-              <option value="Other">Other</option>
+              <option value="Male">{t('male')}</option>
+              <option value="Female">{t('female')}</option>
+              <option value="Other">{t('other')}</option>
             </select>
           </div>
         </div>
 
         <SearchableSelect
-          label="District"
-          options={DISTRICTS.map(d => d.name)}
+          label={t('district')}
+          options={DISTRICTS}
           value={formData.district || ''}
           onChange={(value) => {
             const district = DISTRICTS.find(d => d.name === value);
             setFormData(prev => ({
               ...prev,
               district: value,
-              municipality: district?.municipalities[0] || ''
+              municipality: district?.municipalities[0].name || ''
             }));
           }}
-          placeholder="Select District"
+          placeholder={language === 'en' ? "Select District" : "जिल्ला छान्नुहोस्"}
           error={errors.district}
         />
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <SearchableSelect
-            label="Municipality"
+            label={t('municipality')}
             options={DISTRICTS.find(d => d.name === formData.district)?.municipalities || []}
             value={formData.municipality || ''}
             onChange={(value) => setFormData(prev => ({ ...prev, municipality: value }))}
-            placeholder="Select Municipality"
+            placeholder={language === 'en' ? "Select Municipality" : "नगरपालिका छान्नुहोस्"}
           />
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Ward</label>
+            <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider">{t('ward')}</label>
             <input
               required
               type="text"
@@ -356,11 +410,21 @@ export default function CertificateForm({ onSuccess, onChange }: CertificateForm
             />
             {errors.wardNo && <p className="text-[10px] text-red-500 font-medium">{errors.wardNo}</p>}
           </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider">{language === 'en' ? 'Tole/Village' : 'टोल/गाउँ'}</label>
+            <input
+              type="text"
+              value={formData.tole}
+              onChange={e => setFormData(prev => ({ ...prev, tole: e.target.value }))}
+              className="w-full px-3 py-2.5 text-sm rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none transition-all"
+              placeholder="e.g. Shantinagar"
+            />
+          </div>
         </div>
 
         <div className="space-y-1.5">
           <div className="flex justify-between items-center">
-            <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Diagnosis</label>
+            <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider">{t('diagnosis')}</label>
             <select
               onChange={e => {
                 if (e.target.value) {
@@ -388,7 +452,49 @@ export default function CertificateForm({ onSuccess, onChange }: CertificateForm
         <div className="space-y-3 p-4 bg-neutral-50 rounded-2xl border border-neutral-100">
           <h3 className="text-xs font-bold text-neutral-900 flex items-center gap-2 uppercase tracking-wider">
             <CalendarIcon className="w-3.5 h-3.5" />
-            Dialysis Start
+            {t('dialysisType')}
+          </h3>
+          <div className="flex gap-4">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="dialysisType"
+                value="Hemodialysis"
+                checked={formData.dialysisType === 'Hemodialysis'}
+                onChange={e => setFormData(prev => ({ ...prev, dialysisType: e.target.value as any }))}
+                className="w-4 h-4 text-neutral-900 focus:ring-neutral-900"
+              />
+              <span className="text-sm font-medium text-neutral-700">{t('hemodialysis')}</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="dialysisType"
+                value="CAPD"
+                checked={formData.dialysisType === 'CAPD'}
+                onChange={e => setFormData(prev => ({ ...prev, dialysisType: e.target.value as any }))}
+                className="w-4 h-4 text-neutral-900 focus:ring-neutral-900"
+              />
+              <span className="text-sm font-medium text-neutral-700">{t('capd')}</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="dialysisType"
+                value="Transplant"
+                checked={formData.dialysisType === 'Transplant'}
+                onChange={e => setFormData(prev => ({ ...prev, dialysisType: e.target.value as any }))}
+                className="w-4 h-4 text-neutral-900 focus:ring-neutral-900"
+              />
+              <span className="text-sm font-medium text-neutral-700">{t('renalTransplant')}</span>
+            </label>
+          </div>
+        </div>
+
+        <div className="space-y-3 p-4 bg-neutral-50 rounded-2xl border border-neutral-100">
+          <h3 className="text-xs font-bold text-neutral-900 flex items-center gap-2 uppercase tracking-wider">
+            <CalendarIcon className="w-3.5 h-3.5" />
+            {formData.dialysisType === 'Transplant' ? t('transplantDate') : t('dialysisStart')}
           </h3>
           <div className="space-y-3">
             <div className="space-y-1">
@@ -396,10 +502,15 @@ export default function CertificateForm({ onSuccess, onChange }: CertificateForm
               <NepaliDatePicker
                 value={formData.dialysisStartDateBS || ''}
                 onChange={(value) => handleBSDateChange('dialysisStartDateBS', value)}
-                options={{ calenderLanguage: "en", unicodeSupport: false }}
-                inputClassName={`w-full px-3 py-2 text-sm rounded-xl border ${errors.dialysisStartDateBS ? 'border-red-500 ring-1 ring-red-500' : 'border-neutral-200'} focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none transition-all bg-white`}
+                options={{ calenderLanguage: language === 'ne' ? 'ne' : 'en', unicodeSupport: false }}
+                inputClassName={`w-full px-3 py-2 text-sm rounded-xl border ${errors.dialysisStartDateBS ? 'border-red-500 ring-2 ring-red-500/20' : 'border-neutral-200'} focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none transition-all bg-white`}
               />
-              {errors.dialysisStartDateBS && <p className="text-[10px] text-red-500 font-medium">{errors.dialysisStartDateBS}</p>}
+              {errors.dialysisStartDateBS && (
+                <div className="flex items-center gap-1 mt-1 text-red-500">
+                  <div className="w-1 h-1 bg-red-500 rounded-full" />
+                  <p className="text-[10px] font-bold uppercase tracking-tight">{errors.dialysisStartDateBS}</p>
+                </div>
+              )}
             </div>
             <div className="space-y-1">
               <label className="text-[10px] font-bold text-neutral-400 uppercase">AD Date</label>
@@ -416,7 +527,7 @@ export default function CertificateForm({ onSuccess, onChange }: CertificateForm
         <div className="space-y-3 p-4 bg-neutral-50 rounded-2xl border border-neutral-100">
           <h3 className="text-xs font-bold text-neutral-900 flex items-center gap-2 uppercase tracking-wider">
             <CalendarIcon className="w-3.5 h-3.5" />
-            Issue Date
+            {t('issueDate')}
           </h3>
           <div className="space-y-3">
             <div className="space-y-1">
@@ -424,10 +535,15 @@ export default function CertificateForm({ onSuccess, onChange }: CertificateForm
               <NepaliDatePicker
                 value={formData.issueDateBS || ''}
                 onChange={(value) => handleBSDateChange('issueDateBS', value)}
-                options={{ calenderLanguage: "en", unicodeSupport: false }}
-                inputClassName={`w-full px-3 py-2 text-sm rounded-xl border ${errors.issueDateBS ? 'border-red-500 ring-1 ring-red-500' : 'border-neutral-200'} focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none transition-all bg-white`}
+                options={{ calenderLanguage: language === 'ne' ? 'ne' : 'en', unicodeSupport: false }}
+                inputClassName={`w-full px-3 py-2 text-sm rounded-xl border ${errors.issueDateBS ? 'border-red-500 ring-2 ring-red-500/20' : 'border-neutral-200'} focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none transition-all bg-white`}
               />
-              {errors.issueDateBS && <p className="text-[10px] text-red-500 font-medium">{errors.issueDateBS}</p>}
+              {errors.issueDateBS && (
+                <div className="flex items-center gap-1 mt-1 text-red-500">
+                  <div className="w-1 h-1 bg-red-500 rounded-full" />
+                  <p className="text-[10px] font-bold uppercase tracking-tight">{errors.issueDateBS}</p>
+                </div>
+              )}
             </div>
             <div className="space-y-1">
               <label className="text-[10px] font-bold text-neutral-400 uppercase">AD Date</label>
@@ -442,7 +558,7 @@ export default function CertificateForm({ onSuccess, onChange }: CertificateForm
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Doctor</label>
+          <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider">{t('doctor')}</label>
           <select
             required
             value={formData.doctorId}
@@ -468,7 +584,7 @@ export default function CertificateForm({ onSuccess, onChange }: CertificateForm
             className="w-4 h-4 rounded border-neutral-300 text-neutral-900 focus:ring-neutral-900"
           />
           <label htmlFor="transplant" className="text-xs font-bold text-neutral-700 cursor-pointer">
-            Planned for Transplant
+            {t('plannedForTransplant')}
           </label>
         </div>
       </div>
@@ -484,7 +600,7 @@ export default function CertificateForm({ onSuccess, onChange }: CertificateForm
           ) : (
             <Save className="w-4 h-4" />
           )}
-          Generate & Save
+          {t('generateAndSave')}
         </button>
       </div>
     </form>

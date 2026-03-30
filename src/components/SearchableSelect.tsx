@@ -1,8 +1,14 @@
 import { ChevronDown, Search } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
+import { useLanguage } from '../contexts/LanguageContext';
+
+interface OptionObject {
+  name: string;
+  nameNe: string;
+}
 
 interface SearchableSelectProps {
-  options: string[];
+  options: (string | OptionObject)[];
   value: string;
   onChange: (value: string) => void;
   placeholder: string;
@@ -18,13 +24,34 @@ export default function SearchableSelect({
   label,
   error
 }: SearchableSelectProps) {
+  const { language } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const filteredOptions = options.filter(option =>
-    option.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const getOptionLabel = (option: string | OptionObject) => {
+    if (typeof option === 'string') return option;
+    return language === 'ne' ? option.nameNe : option.name;
+  };
+
+  const getOptionValue = (option: string | OptionObject) => {
+    if (typeof option === 'string') return option;
+    return option.name;
+  };
+
+  const filteredOptions = (options || []).filter(option => {
+    const label = (getOptionLabel(option) || '').toLowerCase();
+    const val = (getOptionValue(option) || '').toLowerCase();
+    const search = (searchTerm || '').toLowerCase();
+    return label.includes(search) || val.includes(search);
+  });
+
+  const displayValue = () => {
+    if (!value) return placeholder;
+    const selectedOption = (options || []).find(opt => getOptionValue(opt) === value);
+    if (selectedOption) return getOptionLabel(selectedOption);
+    return typeof value === 'string' ? value : '';
+  };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -37,8 +64,8 @@ export default function SearchableSelect({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleSelect = (option: string) => {
-    onChange(option);
+  const handleSelect = (option: string | OptionObject) => {
+    onChange(getOptionValue(option));
     setIsOpen(false);
     setSearchTerm('');
   };
@@ -51,7 +78,7 @@ export default function SearchableSelect({
         onClick={() => setIsOpen(!isOpen)}
       >
         <span className={value ? 'text-neutral-900' : 'text-neutral-400'}>
-          {value || placeholder}
+          {displayValue()}
         </span>
         <ChevronDown className={`w-4 h-4 text-neutral-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </div>
@@ -72,22 +99,32 @@ export default function SearchableSelect({
           </div>
           <div className="max-h-60 overflow-y-auto">
             {filteredOptions.length > 0 ? (
-              filteredOptions.map((option) => (
-                <div
-                  key={option}
-                  className={`px-4 py-2.5 text-sm cursor-pointer transition-colors ${
-                    value === option 
-                      ? 'bg-neutral-900 text-white' 
-                      : 'hover:bg-neutral-100 text-neutral-700'
-                  }`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleSelect(option);
-                  }}
-                >
-                  {option}
-                </div>
-              ))
+              filteredOptions.map((option) => {
+                const optValue = getOptionValue(option);
+                const optLabel = getOptionLabel(option);
+                return (
+                  <div
+                    key={optValue}
+                    className={`px-4 py-2.5 text-sm cursor-pointer transition-colors ${
+                      value === optValue 
+                        ? 'bg-neutral-900 text-white' 
+                        : 'hover:bg-neutral-100 text-neutral-700'
+                    }`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleSelect(option);
+                    }}
+                  >
+                    {optLabel}
+                    {typeof option !== 'string' && language === 'ne' && (
+                      <span className="ml-2 text-[10px] opacity-50">({option.name})</span>
+                    )}
+                    {typeof option !== 'string' && language === 'en' && (
+                      <span className="ml-2 text-[10px] opacity-50">({option.nameNe})</span>
+                    )}
+                  </div>
+                );
+              })
             ) : (
               <div className="px-4 py-3 text-sm text-neutral-400 italic">
                 No results found

@@ -12,6 +12,7 @@ service cloud.firestore {
     //   - age: number (required)
     //   - gender: string (required, Male/Female/Other)
     //   - nagritaNumber: string (optional)
+    //   - patientPhone: string (optional)
     //   - district: string (required)
     //   - municipality: string (required)
     //   - wardNo: string (required)

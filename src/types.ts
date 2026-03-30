@@ -19,6 +19,7 @@ export type CertificateTemplateId = 'standard' | 'modern' | 'classic';
 export interface HospitalSettings {
   id?: string;
   name: string;
+  nameNe?: string;
   department: string;
   address: string;
   phone: string;
@@ -32,9 +33,12 @@ export interface PatientRecord {
   age: number;
   gender: 'Male' | 'Female' | 'Other';
   nagritaNumber?: string;
+  patientPhone?: string;
   district: string;
   municipality: string;
   wardNo: string;
+  tole?: string;
+  dialysisType?: 'Hemodialysis' | 'CAPD' | 'Transplant';
   diagnosis: string;
   dialysisStartDateBS?: string;
   dialysisStartDateAD?: string;
@@ -52,7 +56,13 @@ export interface PatientRecord {
   createdBy: string;
 }
 
+export interface Municipality {
+  name: string;
+  nameNe: string;
+}
+
 export interface District {
   name: string;
-  municipalities: string[];
+  nameNe: string;
+  municipalities: Municipality[];
 }
