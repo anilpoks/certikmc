@@ -1,5 +1,5 @@
 import { addDoc, collection, onSnapshot, query, serverTimestamp } from 'firebase/firestore';
-import { Calendar as CalendarIcon, CheckCircle, Save, User } from 'lucide-react';
+import { Calendar as CalendarIcon, CheckCircle, FileText, Layout, Save, User } from 'lucide-react';
 import NepaliDate from 'nepali-date-converter';
 import React, { useEffect, useState } from 'react';
 import { NepaliDatePicker } from 'nepali-datepicker-reactjs';
@@ -43,6 +43,12 @@ export default function CertificateForm({ onSuccess, onChange }: CertificateForm
     doctorDepartment: '',
     doctorHospital: 'Kathmandu Medical College Public Limited',
   });
+
+  const templates = [
+    { id: 'standard', name: 'Standard', nameNe: 'साधारण' },
+    { id: 'classic', name: 'Classic (Formal)', nameNe: 'क्लासिक (औपचारिक)' },
+    { id: 'modern', name: 'Modern (Minimal)', nameNe: 'आधुनिक (न्यूनतम)' },
+  ];
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -299,20 +305,48 @@ export default function CertificateForm({ onSuccess, onChange }: CertificateForm
         </button>
       </div>
 
-      <div className="grid grid-cols-1 gap-4">
-        <div className="space-y-1.5">
-          <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider">{t('template')}</label>
-          <select
-            value={formData.templateId}
-            onChange={e => setFormData(prev => ({ ...prev, templateId: e.target.value as any }))}
-            className="w-full px-3 py-2.5 text-sm rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none transition-all"
-          >
-            <option value="standard">Standard (Official KMC)</option>
-            <option value="modern">Modern (Minimalist)</option>
-            <option value="classic">Classic (Formal Border)</option>
-          </select>
+      {/* Template Selection */}
+      <div className="bg-neutral-50 p-6 rounded-3xl border border-neutral-100 mb-8">
+        <div className="flex items-center gap-2 mb-4">
+          <Layout className="w-4 h-4 text-neutral-400" />
+          <h3 className="text-sm font-bold text-neutral-900 uppercase tracking-wider">
+            {language === 'en' ? 'Certificate Style' : 'प्रमाणपत्र शैली'}
+          </h3>
         </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {templates.map((template) => (
+            <button
+              key={template.id}
+              type="button"
+              onClick={() => {
+                setFormData(prev => ({ ...prev, templateId: template.id as any }));
+                if (onChange) onChange({ templateId: template.id as any });
+              }}
+              className={`relative px-4 py-4 rounded-2xl border-2 transition-all text-left flex flex-col gap-1 group ${
+                formData.templateId === template.id
+                  ? 'border-neutral-900 bg-white shadow-md'
+                  : 'border-transparent bg-white/50 text-neutral-500 hover:bg-white hover:border-neutral-200'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span className={`text-sm font-bold ${formData.templateId === template.id ? 'text-neutral-900' : ''}`}>
+                  {language === 'en' ? template.name : template.nameNe}
+                </span>
+                {formData.templateId === template.id && (
+                  <div className="bg-neutral-900 rounded-full p-0.5">
+                    <CheckCircle className="w-3 h-3 text-white" />
+                  </div>
+                )}
+              </div>
+              <span className="text-[10px] uppercase tracking-widest opacity-50 font-medium">
+                {template.id === 'standard' ? 'Official' : template.id === 'modern' ? 'Minimalist' : 'Formal Border'}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
 
+      <div className="grid grid-cols-1 gap-4">
         <div className="space-y-1.5">
           <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider">{t('patientName')}</label>
           <input

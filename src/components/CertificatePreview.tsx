@@ -297,6 +297,96 @@ export default function CertificatePreview({ record }: CertificatePreviewProps) 
     
     switch (templateId) {
       case 'modern':
+        return (
+          <div className={`${commonClasses} !p-16`}>
+            {/* Minimalist Header */}
+            <div className="flex flex-col items-center mb-12">
+              <div className="h-20 w-20 mb-4">
+                <img 
+                  src={hospitalSettings.logoUrl || "https://kmc.edu.np/wp-content/uploads/2023/06/kmc-logo.png"} 
+                  alt="Hospital Logo" 
+                  className="h-full w-full object-contain grayscale opacity-80"
+                  referrerPolicy="no-referrer"
+                  crossOrigin="anonymous"
+                />
+              </div>
+              <h1 className="text-xl font-light text-neutral-900 uppercase tracking-[0.2em] text-center">
+                {language === 'ne' ? (hospitalSettings.nameNe || hospitalSettings.name) : hospitalSettings.name}
+              </h1>
+              <p className="text-[10px] text-neutral-400 uppercase tracking-widest mt-2">
+                {hospitalSettings.department} • {hospitalSettings.address}
+              </p>
+            </div>
+            
+            <div className="flex justify-between mb-16 text-[9px] uppercase tracking-[0.3em] text-neutral-300">
+              <div className="flex items-center gap-2">
+                <span>{t('refNo')}:</span>
+                <span className="text-neutral-500">{record.id?.slice(-8).toUpperCase() || '____________________'}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span>{t('date')}:</span>
+                <span className="text-neutral-500">{record.issueDateBS ? formatNumber(record.issueDateBS) : ''}</span>
+              </div>
+            </div>
+            
+            <div className="text-center mb-16">
+              <h2 className="text-3xl font-thin text-neutral-900 uppercase tracking-[0.4em]">
+                {t('medicalCertificate')}
+              </h2>
+            </div>
+
+            <div className="text-[15px] leading-[1.8] text-neutral-600 space-y-8 flex-grow font-light">
+              <Body />
+            </div>
+            
+            <div className="mt-auto pt-12 flex justify-between items-end border-t border-neutral-50">
+              <div className="text-left">
+                <p className="text-lg font-medium text-neutral-900">{record.doctorName}</p>
+                <p className="text-[10px] text-neutral-400 uppercase tracking-widest mt-1">{record.doctorDesignation}</p>
+                <p className="text-[10px] text-neutral-400 uppercase tracking-widest">NMC: {record.doctorNmc}</p>
+              </div>
+              <div className="text-right text-[9px] text-neutral-300 uppercase tracking-widest">
+                KMC Nephrology • {record.id?.slice(-8)}
+              </div>
+            </div>
+          </div>
+        );
+      case 'classic':
+        return (
+          <div className={`${commonClasses} border-[24px] border-double border-neutral-100`}>
+            {/* Classic Border Overlay */}
+            <div className="absolute inset-4 border border-neutral-200 pointer-events-none" />
+            
+            <Header />
+            
+            <div className="flex justify-between mb-10 text-xs font-serif italic text-neutral-500">
+              <div>{t('refNo')}: <span className="text-neutral-900 font-bold">{record.id?.slice(-8).toUpperCase() || '_________'}</span></div>
+              <div>{t('date')}: <span className="text-neutral-900 font-bold">{record.issueDateBS}</span></div>
+            </div>
+
+            <div className="text-center mb-12">
+              <h2 className="text-3xl font-bold text-neutral-900 uppercase tracking-[0.1em] font-serif border-y-2 border-neutral-900 py-4 inline-block px-12">
+                {t('medicalCertificate')}
+              </h2>
+            </div>
+
+            <div className="font-serif text-lg leading-relaxed text-neutral-800 space-y-6 flex-grow">
+              <Body />
+            </div>
+            
+            <div className="mt-auto pt-12 flex justify-between items-end">
+              <div className="text-left font-serif">
+                <div className="w-48 border-b border-neutral-900 mb-2" />
+                <p className="text-xl font-bold text-neutral-900">{record.doctorName}</p>
+                <p className="text-sm italic text-neutral-600">{record.doctorDesignation}</p>
+                <p className="text-sm font-bold">NMC: {record.doctorNmc}</p>
+              </div>
+              <div className="w-32 h-32 border-2 border-dashed border-neutral-100 rounded-full flex items-center justify-center text-[8px] text-neutral-300 uppercase text-center p-4">
+                Hospital Seal
+              </div>
+            </div>
+          </div>
+        );
       case 'standard':
       default:
         return (
@@ -329,28 +419,6 @@ export default function CertificatePreview({ record }: CertificatePreviewProps) 
               <span>KMC Nephrology Management System</span>
               <span>ID: {record.id || '____________________'}</span>
             </div>
-          </div>
-        );
-      case 'classic':
-        return (
-          <div className={`${commonClasses} border-[16px] border-double border-blue-900/5`}>
-            <Header />
-            <div className="border-t-4 border-blue-900/20 my-6" />
-            
-            <div className="flex justify-between mb-12 italic text-neutral-600 font-serif">
-              <span>{t('refNo')}: _________</span>
-              <span>{t('date')}: {record.issueDateBS}</span>
-            </div>
-
-            <div className="text-center mb-16">
-              <h2 className="text-2xl font-bold underline decoration-double underline-offset-[12px] uppercase tracking-widest text-blue-900 font-serif">
-                {t('medicalCertificate')}
-              </h2>
-            </div>
-
-            <Body />
-            
-            <Footer />
           </div>
         );
     }
